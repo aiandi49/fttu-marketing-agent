@@ -187,7 +187,9 @@
     $('ladder').innerHTML = M.LADDER.map(function (r, i) {
       return '<li class="' + (i < at ? 'done' : i === at ? 'now' : '') + '"' + (i === at ? ' aria-current="step"' : '') + '><span>' + esc(r.label) + '</span></li>';
     }).join('');
-    $('signal').textContent = M.LADDER[at].label + ': ' + M.LADDER[at].means + ' Demand so far: ' + prod.signal;
+    /* if the founder reported progress in chat, the saved demand line is out of date — say where the new rung came from instead */
+    var moved = m && m.stage !== prod.stage;
+    $('signal').textContent = M.LADDER[at].label + ': ' + M.LADDER[at].means + ' Demand so far: ' + (moved ? 'as you told the agent in this chat.' : prod.signal);
     $('ideaList').innerHTML = prod.ideas.map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('');
     $('ruleList').innerHTML = M.rulesFor(prod.key).filter(function (r) { return r.applies !== 'all' || r.key === 'eyes' || r.key === 'concept' || (view.key === 'presale' && r.key === 'preorder') || (view.key === 'paid' && r.key === 'disclose'); }).map(function (r) { return '<li>' + esc(r.title) + '</li>'; }).join('');
     $('nextText').textContent = m && m.next ? m.next : (m ? 'Ask the agent for the next step.' : 'Tell the agent what you want to get out there. Until then, this shows the sneaker \u2014 tap a way above to compare.');
@@ -201,7 +203,13 @@
 
   /* ───────── sending ───────── */
   function chip(mode) { var c = $('countChip'); c.classList.remove('live', 'error'); if (mode) c.classList.add(mode); }
-  function grow() { input.style.height = 'auto'; input.style.height = Math.min(input.scrollHeight, 140) + 'px'; }
+  function grow() {
+    /* scrollHeight leaves out the borders; add them so the box never ends up a few pixels short (that is what drew a scrollbar) */
+    input.style.height = 'auto';
+    var need = input.scrollHeight + (input.offsetHeight - input.clientHeight);
+    input.style.height = Math.min(need, 140) + 'px';
+    input.style.overflowY = need > 140 ? 'auto' : 'hidden';
+  }
   function send() {
     var text = input.value.trim();
     if (!text || busy) return;
